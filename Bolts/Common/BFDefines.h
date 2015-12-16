@@ -8,17 +8,11 @@
  *
  */
 
-@import XCTest;
+#import <Foundation/Foundation.h>
 
-#import <Bolts/Bolts.h>
-
-@interface BoltsTests : XCTestCase
-@end
-
-@implementation BoltsTests
-
-- (void)testVersion {
-    XCTAssertEqualObjects(BOLTS_VERSION, [Bolts version]);
-}
-
-@end
+#if __has_feature(objc_generics) || __has_extension(objc_generics)
+#  define BF_GENERIC(type) <type>
+#else
+#  define BF_GENERIC(type)
+#  define BFGenericType id
+#endif

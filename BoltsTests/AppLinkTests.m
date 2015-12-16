@@ -6,15 +6,13 @@
 //  Copyright (c) 2014 Parse Inc. All rights reserved.
 //
 
-#import <XCTest/XCTest.h>
-#import <UIKit/UIKit.h>
-#import <objc/runtime.h>
-#import <objc/message.h>
+@import XCTest;
+@import UIKit;
+@import ObjectiveC.runtime;
 
-#import "Bolts.h"
-#import "BFWebViewAppLinkResolver.h"
+#import <Bolts/Bolts.h>
 
-NSMutableArray *openedUrls = nil;
+static NSMutableArray *openedUrls;
 
 @interface AppLinkTests : XCTestCase
 
@@ -40,8 +38,14 @@ NSMutableArray *openedUrls = nil;
  Swizzled-in replacement for UIApplication openUrl so that we can capture results.
  */
 - (BOOL)openURLReplacement:(NSURL *)url {
-    [openedUrls addObject:url];
-    return YES;
+    if ([url.absoluteString hasPrefix:@"bolts://"]
+        || [url.absoluteString hasPrefix:@"bolts2://"]
+        || [url.absoluteString hasPrefix:@"http://"]
+        || [url.absoluteString hasPrefix:@"file://"]) {
+        [openedUrls addObject:url];
+        return YES;
+    }
+    return NO;
 }
 
 /*!
@@ -169,6 +173,16 @@ NSMutableArray *openedUrls = nil;
     XCTAssertEqualObjects(@"bat", openedURL.targetQueryParameters[@"baz"]);
     XCTAssertEqualObjects(@"bar", openedURL.inputQueryParameters[@"foo"]);
     XCTAssertEqualObjects(@"b", openedURL.appLinkData[@"a"]);
+    XCTAssert(openedURL.appLinkData[@"user_agent"]);
+    XCTAssertEqualObjects(url.absoluteString, openedURL.inputURL.absoluteString);
+}
+
+- (void)testOpenedURLWithBadTarget {
+    NSURL *url = [NSURL URLWithString:@"bolts://?al_applink_data=%7B%22user_agent%22%3A%22Bolts%20iOS%201.0.0%22%2C%22target_url%22%3Anull%7D"];
+
+    BFURL *openedURL = [BFURL URLWithURL:url];
+
+    XCTAssertEqualObjects(url, openedURL.targetURL);
     XCTAssert(openedURL.appLinkData[@"user_agent"]);
     XCTAssertEqualObjects(url.absoluteString, openedURL.inputURL.absoluteString);
 }
@@ -447,6 +461,10 @@ NSMutableArray *openedUrls = nil;
         case UIUserInterfaceIdiomPad:
             XCTAssertEqualObjects(@"bolts2://ipad", target.URL.absoluteString);
             break;
+#ifdef __TVOS_9_0
+        case UIUserInterfaceIdiomTV:
+#endif
+        case UIUserInterfaceIdiomUnspecified:
         default:
             break;
     }
@@ -712,6 +730,10 @@ NSMutableArray *openedUrls = nil;
         case UIUserInterfaceIdiomPad:
             XCTAssertEqualObjects(@"bolts2://ipad", target.URL.absoluteString);
             break;
+#ifdef __TVOS_9_0
+        case UIUserInterfaceIdiomTV:
+#endif
+        case UIUserInterfaceIdiomUnspecified:
         default:
             break;
     }
